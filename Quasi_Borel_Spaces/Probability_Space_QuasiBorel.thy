@@ -813,7 +813,7 @@ lemma qbs_integrable_cong:
       and "qbs_integrable s f"
     shows "qbs_integrable s g"
   apply(rule qbs_integrable_if_integrable)
-  using integrable_cong[OF refl, of "qbs_prob_measure s" f g,simplified qbs_prob_measure_space[symmetric] assms(1),OF assms(2)]
+  using Bochner_Integration.integrable_cong[OF refl, of "qbs_prob_measure s" f g,simplified qbs_prob_measure_space[symmetric] assms(1),OF assms(2)]
         qbs_integrable_iff_integrable[of s f] assms(3)
   by simp
 

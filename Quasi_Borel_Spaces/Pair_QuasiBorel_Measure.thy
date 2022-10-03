@@ -370,7 +370,7 @@ proof -
     moreover have "\<And>x. ((\<lambda>x. \<integral>\<^sub>Q y. f (x, y) \<partial>q) \<circ> \<alpha>) x = LINT y|\<nu>. (f \<circ> map_prod \<alpha> \<beta>) (x, y)"
      by(auto intro!: pqp.qp2.qbs_prob_integral_def qbs_morphism_Pair1'[OF qbs_Mx_to_X(2)[OF pqp.qp1.in_Mx] h0(3)] simp: hq)
     ultimately show "integrable \<mu> ((\<lambda>x. \<integral>\<^sub>Q y. f (x, y) \<partial>q) \<circ> \<alpha>)"
-      using integrable_cong[of \<mu> \<mu> "(\<lambda>x. \<integral>\<^sub>Q y. f (x, y) \<partial>q) \<circ> \<alpha>" " (\<lambda>x. LINT y|\<nu>. (f \<circ> map_prod \<alpha> \<beta>) (x, y))"]
+      using Bochner_Integration.integrable_cong[of \<mu> \<mu> "(\<lambda>x. \<integral>\<^sub>Q y. f (x, y) \<partial>q) \<circ> \<alpha>" " (\<lambda>x. LINT y|\<nu>. (f \<circ> map_prod \<alpha> \<beta>) (x, y))"]
       by simp
   qed
 qed
