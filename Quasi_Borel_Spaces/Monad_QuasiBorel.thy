@@ -153,9 +153,9 @@ proof(rule qbs_closed3I)
   \<comment> \<open> The proof is divided into 3 steps.
        \begin{enumerate}
        \item  Let \<open>\<alpha>'' = uncurry \<alpha> \<circ> nat_real.g\<close>. Then \<open>\<alpha>'' \<in> qbs_Mx X\<close>.
-       \item Let \<open>g'' = G(nat_real.f) \<circ> (\<lambda>r. \<delta>\<^sub>P\<^sub>(\<^sub>r\<^sub>) \<Otimes>\<^sub>M g\<^sub>P\<^sub>(\<^sub>r\<^sub>) r\<close>.
-               Then \<open>g''\<close> is \<open>\<real>\<close>/\<open>G(\<real>)\<close> measurable. 
-       \item Show that \<open>(\<lambda>r. Fi (P r) r) = (\<lambda>r. qbs_prob_space (X, \<alpha>'', g'' r))\<close>.
+       \item Let \<open>g' = G(nat_real.f) (G((\<lambda>l. (P r, l))) (g\<^sub>P\<^sub>(\<^sub>r\<^sub>) r))\<close>.
+               Then \<open>g'\<close> is \<open>\<real>\<close>/\<open>G(\<real>)\<close> measurable. 
+       \item Show that \<open>(\<lambda>r. Fi (P r) r) = (\<lambda>r. qbs_prob_space (X, \<alpha>'', g' r))\<close>.
        \end{enumerate}\<close>
 
   \<comment> \<open> Step 1.\<close>
@@ -180,69 +180,39 @@ proof(rule qbs_closed3I)
 
 
   \<comment> \<open> Step 2.\<close>
-  define g' :: "real \<Rightarrow> (nat \<times> real) measure"
-    where "g' \<equiv> (\<lambda>r. return nat_borel (P r) \<Otimes>\<^sub>M g (P r) r)"
-  define g'' :: "real \<Rightarrow> real measure"
-    where "g'' \<equiv> (\<lambda>M. distr M real_borel nat_real.f) \<circ> g'"
-
-  have [measurable]:"(\<lambda>nr. g (fst nr) (snd nr)) \<in> nat_borel \<Otimes>\<^sub>M real_borel \<rightarrow>\<^sub>M prob_algebra real_borel"
-    using measurable_pair_measure_countable1[of "UNIV :: nat set" "\<lambda>nr. g (fst nr) (snd nr)",simplified,OF H0(2)] measurable_cong_sets[OF sets_pair_measure_cong[of nat_borel "count_space UNIV" real_borel real_borel,OF sets_borel_eq_count_space refl] refl,of "prob_algebra real_borel"]
-    by auto    
-  hence [measurable]:"(\<lambda>r. g (P r) r) \<in> real_borel \<rightarrow>\<^sub>M prob_algebra real_borel"
+  define g' where "g' \<equiv> (\<lambda>r. distr (distr (g (P r) r) (borel \<Otimes>\<^sub>M borel) (\<lambda>r'. (P r, r'))) borel nat_real.f)"
+  have [measurable_cong]: "sets (g i r) = sets real_borel" for i r
+    using measurable_space[OF H0(2)[of i]] space_prob_algebra by auto
+  have g'_mble[measurable]: "g' \<in> real_borel \<rightarrow>\<^sub>M prob_algebra real_borel"
   proof -
-    have "(\<lambda>r. g (P r) r) = (\<lambda>nr. g (fst nr) (snd nr)) \<circ> (\<lambda>r. (P r, r))" by auto
+    have "g' = (\<lambda>(i,r). distr (g i r) borel (\<lambda>r'. nat_real.f (i, r'))) \<circ> (\<lambda>r. (P r, r))"
+      by(simp add: g'_def distr_distr comp_def)
     also have "... \<in> real_borel \<rightarrow>\<^sub>M prob_algebra real_borel"
-      by simp
+      apply(rule measurable_comp[where N="borel \<Otimes>\<^sub>M borel"])
+       apply(simp_all add: measurable_cong_sets[OF sets_pair_measure_cong[OF sets_borel_eq_count_space]])
+      apply(rule measurable_pair_measure_countable1)
+      using H0(2) by auto
     finally show ?thesis .
   qed
-  have g'_mble[measurable]:"g' \<in> real_borel \<rightarrow>\<^sub>M prob_algebra (nat_borel \<Otimes>\<^sub>M real_borel)"
-    unfolding g'_def by simp
-  have H_mble: "g'' \<in> real_borel \<rightarrow>\<^sub>M prob_algebra real_borel"
-    unfolding g''_def by simp
 
   \<comment> \<open> Step 3.\<close>
   have H_equiv: 
-       "qbs_prob_space (X, \<alpha> (P r), g (P r) r) = qbs_prob_space (X, \<alpha>'', g'' r)" for r
+       "qbs_prob_space (X, \<alpha> (P r), g (P r) r) = qbs_prob_space (X, \<alpha>'', g' r)" for r
   proof -
-    interpret pqp: pair_qbs_prob X "\<alpha> (P r)" "g (P r) r" X \<alpha>'' "g'' r"
-      using qbs_prob_MPx[OF H0(1,2)] measurable_space[OF H_mble,of r] space_prob_algebra[of real_borel] H_Mx
+    interpret pqp: pair_qbs_prob X "\<alpha> (P r)" "g (P r) r" X \<alpha>'' "g' r"
+      using qbs_prob_MPx[OF H0(1,2)] measurable_space[OF g'_mble,of r] space_prob_algebra[of real_borel] H_Mx
       by (simp add: pair_qbs_prob.intro qbs_probI)
     interpret pps: pair_prob_space "return nat_borel (P r)" "g (P r) r"
       using prob_space_return[of "P r" nat_borel]
       by(simp add: pair_prob_space_def pair_sigma_finite_def prob_space_imp_sigma_finite)
-    have [measurable_cong]: "sets (return nat_borel (P r)) = sets nat_borel"
-                            "sets (g' r) = sets (nat_borel \<Otimes>\<^sub>M real_borel)"
-      using measurable_space[OF g'_mble,of r] space_prob_algebra by auto
-    show "qbs_prob_space (X, \<alpha> (P r), g (P r) r) = qbs_prob_space (X, \<alpha>'', g'' r)"
-    proof(rule pqp.qbs_prob_space_eq4)
-      fix f
-      assume [measurable]:"f \<in> qbs_to_measure X  \<rightarrow>\<^sub>M ennreal_borel"
-      show "(\<integral>\<^sup>+ x. f (\<alpha> (P r) x) \<partial>g (P r) r) = (\<integral>\<^sup>+ x. f (\<alpha>'' x) \<partial>g'' r)"
-           (is "?lhs = ?rhs")
-      proof -
-        have "?lhs = (\<integral>\<^sup>+s. f (\<alpha>' ((P r),s)) \<partial> (g (P r) r))"
-          by(simp add: \<alpha>'_def)
-        also have "... = (\<integral>\<^sup>+s. (\<integral>\<^sup>+i. f (\<alpha>' (i, s)) \<partial> (return nat_borel (P r)))  \<partial> (g (P r) r))"
-          by(auto intro!: nn_integral_cong simp: nn_integral_return[of "P r" nat_borel])
-        also have "... = (\<integral>\<^sup>+k. (f \<circ> \<alpha>') k \<partial> ((return nat_borel (P r)) \<Otimes>\<^sub>M (g (P r) r)))"
-          by(auto intro!: pps.nn_integral_snd)
-        also have "... = (\<integral>\<^sup>+k. f (\<alpha>' k) \<partial> (g' r))"
-          by(simp add: g'_def)
-        also have "... = (\<integral>\<^sup>+x. f x \<partial> (distr (g' r) (qbs_to_measure X) \<alpha>'))"
-          by(simp add: nn_integral_distr)
-        also have "... = (\<integral>\<^sup>+x. f x \<partial> (distr (g'' r) (qbs_to_measure X) \<alpha>''))"
-          by(simp add: distr_distr comp_def g''_def \<alpha>''_def)
-        also have "... = ?rhs"
-          by(simp add: nn_integral_distr)
-        finally show ?thesis .
-      qed
-    qed simp
+    show "qbs_prob_space (X, \<alpha> (P r), g (P r) r) = qbs_prob_space (X, \<alpha>'', g' r)"
+      by(rule pqp.qbs_prob_space_eq,auto simp: g'_def \<alpha>''_def comp_def distr_distr) (simp add: \<alpha>'_def)
   qed
 
-  have "\<forall>r. Fi (P r) r = qbs_prob_space (X, \<alpha>'', g'' r)"
+  have "\<forall>r. Fi (P r) r = qbs_prob_space (X, \<alpha>'', g' r)"
     by (metis H_equiv LHS)
   thus "(\<lambda>r. Fi (P r) r) \<in> monadP_qbs_MPx X"
-    using H_mble H_Mx by(auto simp add: monadP_qbs_MPx_def in_MPx_def)
+    using g'_mble H_Mx by(auto simp: monadP_qbs_MPx_def in_MPx_def intro!: bexI[where x=\<alpha>''] bexI[where x=g'])
 qed
 
 lemma monadP_qbs_correct: "Rep_quasi_borel (monadP_qbs X) = (monadP_qbs_Px X, monadP_qbs_MPx X)"
