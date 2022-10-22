@@ -287,78 +287,28 @@ proof -
 qed
 
 subsubsection \<open> List \<close>
-definition hp_nil :: "'env \<Rightarrow> nat \<times> (nat \<Rightarrow> 'a)" ("[]\<^sub>t") where
-"hp_nil \<equiv> hp_const list_nil"
+abbreviation "list \<equiv> list_qbs"
+definition hp_nil :: "'env \<Rightarrow> 'a list" ("[]\<^sub>t") where
+"hp_nil \<equiv> hp_const []"
 
 lemma hpt_nil:
- "\<Gamma> \<turnstile>\<^sub>t hp_nil ;; list_of X"
+ "\<Gamma> \<turnstile>\<^sub>t hp_nil ;; list X"
   unfolding hp_nil_def hpprog_typing_def hp_const_def
-  by(auto intro!: qbs_morphismI coprod_qbs_MxI prod_qbs_MxI)
+  by(auto intro!: qbs_morphismI qbs_closed2_dest simp: list_qbs_space)
 
-definition hp_cons' :: "['env, 'a, nat \<times> (nat \<Rightarrow> 'a)] \<Rightarrow> nat \<times> (nat \<Rightarrow> 'a)" where
-"hp_cons' \<equiv> hp_const list_cons"
+definition hp_cons' :: "['env, 'a, 'a list] \<Rightarrow> 'a list" where
+"hp_cons' \<equiv> hp_const Cons"
 
 lemma hpt_cons':
- "\<Gamma> \<turnstile>\<^sub>t hp_cons' ;; exp_qbs X (exp_qbs (list_of X) (list_of X))"
+ "\<Gamma> \<turnstile>\<^sub>t hp_cons' ;; exp_qbs X (exp_qbs (list X) (list X))"
   unfolding hpprog_typing_def hp_cons'_def hp_const_def
-  apply(rule qbs_morphism_const,simp)
-  apply(rule curry_preserves_morphisms[of "\<lambda>z. list_cons (fst z) (snd z)",simplified curry_def fst_conv snd_conv])
-proof(rule pair_qbs_morphismI)
-  fix \<alpha> \<beta>
-  assume h:"\<alpha> \<in> qbs_Mx X"
-           "\<beta> \<in> qbs_Mx (list_of X)"
-  then obtain \<gamma> f where hf:
-   "\<beta> = (\<lambda>r. (f r, \<gamma> (f r) r))" "f \<in> real_borel \<rightarrow>\<^sub>M count_space UNIV" "\<And>i. i \<in> range f \<Longrightarrow> \<gamma> i \<in> qbs_Mx (\<Pi>\<^sub>Q j\<in>{..<i}. X)"
-    by(auto simp: coprod_qbs_Mx_def)
-  define f' \<beta>'
-    where "f' \<equiv> (\<lambda>r. Suc (f r))" "\<beta>' \<equiv> (\<lambda>i r n. if n = 0 then \<alpha> r else \<gamma> (i - 1) r (n - 1))"
-  then have "(\<lambda>z. list_cons (fst z) (snd z)) \<circ> (\<lambda>r. (\<alpha> r, \<beta> r)) = (\<lambda>r. (f' r, \<beta>' (f' r) r))"
-    by(auto simp: comp_def hf(1) ext)
-  also have "... \<in> qbs_Mx (list_of X)"
-  proof(simp,rule coprod_qbs_MxI)
-    show "f' \<in> real_borel \<rightarrow>\<^sub>M count_space UNIV"
-      using hf by(simp add: f'_\<beta>'_def(1))
-  next
-    fix j
-    assume hj:"j \<in> range f'"
-    then have hj':"j - 1 \<in> range f"
-      by(auto simp: f'_\<beta>'_def(1))
-    show "\<beta>' j \<in> qbs_Mx (\<Pi>\<^sub>Q i\<in>{..<j}. X)"   
-    proof(simp, rule prod_qbs_MxI)
-      fix i
-      assume hi:"i \<in> {..<j}"
-      then consider "i = 0" | "0 < i" "i < j"
-        by auto
-      then show "(\<lambda>r. \<beta>' j r i) \<in> qbs_Mx X"
-      proof cases
-        case 1
-        then show ?thesis by(simp add: h(1) f'_\<beta>'_def(2))
-      next
-        case 2
-        then have "i - 1 \<in> {..<j - Suc 0}" by simp
-        from prod_qbs_MxE(1)[OF hf(3)[OF hj',simplified] this] 2
-        show ?thesis
-          by(simp add: f'_\<beta>'_def(2))
-      qed
-    next
-      fix i
-      assume hi:"i \<notin> {..<j}"
-      then have "i \<noteq> 0" "i - Suc 0 \<notin> {..<j - Suc 0}"
-        using f'_\<beta>'_def(1) hj by fastforce+
-      with prod_qbs_MxE(2)[OF hf(3)[OF hj',simplified]]
-      show "(\<lambda>r. \<beta>' j r i) = (\<lambda>r. undefined)"
-        by(simp add: f'_\<beta>'_def(2))
-    qed
-  qed
-  finally show "(\<lambda>z. list_cons (fst z) (snd z)) \<circ> (\<lambda>r. (\<alpha> r, \<beta> r)) \<in> qbs_Mx (list_of X)" .
-qed
-
+  by(rule qbs_morphism_const,simp add: cons_qbs_morphism)
 
 definition "hp_cons hx hl \<equiv> hp_app (hp_app hp_cons' hx) hl"
 lemma hpt_cons:
-  assumes "\<Gamma> \<turnstile>\<^sub>t l ;; list_of X"
+  assumes "\<Gamma> \<turnstile>\<^sub>t l ;; list X"
       and "\<Gamma> \<turnstile>\<^sub>t x ;; X"
-    shows "\<Gamma> \<turnstile>\<^sub>t hp_cons x l ;; list_of X"
+    shows "\<Gamma> \<turnstile>\<^sub>t hp_cons x l ;; list X"
   unfolding hp_cons_def
   apply(rule hpt_app)+
     apply(rule hpt_cons')
@@ -373,7 +323,7 @@ translations
   "[x]\<^sub>t" == "CONST hp_cons x []\<^sub>t"
 
 lemma
-  "\<Gamma>,,\<real>\<^sub>Q,,\<real>\<^sub>Q \<turnstile>\<^sub>t [var1, hp_const 1, var2]\<^sub>t ;; list_of \<real>\<^sub>Q"
+  "\<Gamma>,,\<real>\<^sub>Q,,\<real>\<^sub>Q \<turnstile>\<^sub>t [var1, hp_const 1, var2]\<^sub>t ;; list \<real>\<^sub>Q"
   apply(rule hpt_cons)+
      apply(rule hpt_nil)
     apply(rule hpt_var2)
@@ -959,22 +909,22 @@ lemma hpt_recnat':
     shows "\<Gamma>  \<turnstile>\<^sub>t hp_rec_nat t0 (hp_lambda (hp_lambda e)) ;; (exp_qbs \<nat>\<^sub>Q T)"
   by(rule hpt_recnat[OF assms(1) hpt_abs[OF hpt_abs[OF assms(2)]]])
 
-definition "hp_rec_list \<equiv> hp_lift2 rec_list'"
+definition "hp_rec_list \<equiv> hp_lift2 rec_list"
 
 (*  \<Gamma> |- t0 : T     \<Gamma> |- f : X \<Rightarrow> list X \<Rightarrow> T \<Rightarrow> T 
    ---------------------------------------
           \<Gamma> |- rec t0 f : list X \<Rightarrow> T          *)
 lemma hpt_reclist:
   assumes "\<Gamma>  \<turnstile>\<^sub>t t0 ;; T"
-      and "\<Gamma>  \<turnstile>\<^sub>t f ;; (exp_qbs X (exp_qbs (list_of X) (exp_qbs T T)))"
-    shows "\<Gamma>  \<turnstile>\<^sub>t hp_rec_list t0 f ;; (exp_qbs (list_of X) T)"
+      and "\<Gamma>  \<turnstile>\<^sub>t f ;; (exp_qbs X (exp_qbs (list X) (exp_qbs T T)))"
+    shows "\<Gamma>  \<turnstile>\<^sub>t hp_rec_list t0 f ;; (exp_qbs (list X) T)"
   unfolding hpprog_typing_def hp_rec_list_def
-  by(auto intro!: qbs_morphism_comp[OF qbs_morphism_tuple[OF assms(1)[simplified hpprog_typing_def] assms(2)[simplified hpprog_typing_def]],of "case_prod rec_list'",simplified comp_def split_beta fst_conv snd_conv] uncurry_preserves_morphisms rec_list_morphism'[simplified])
+  by(auto intro!: qbs_morphism_comp[OF qbs_morphism_tuple[OF assms(1)[simplified hpprog_typing_def] assms(2)[simplified hpprog_typing_def]],of "case_prod rec_list",simplified comp_def split_beta fst_conv snd_conv] uncurry_preserves_morphisms rec_list_morphism[simplified])
 
 lemma hpt_reclist':
   assumes "\<Gamma>  \<turnstile>\<^sub>t t0 ;; T"
-      and "\<Gamma> ,, X ,, list_of X ,, T \<turnstile>\<^sub>t e ;; T"
-    shows "\<Gamma>  \<turnstile>\<^sub>t hp_rec_list t0 (hp_lambda (hp_lambda (hp_lambda e))) ;; (exp_qbs (list_of X) T)"
+      and "\<Gamma> ,, X ,, list X ,, T \<turnstile>\<^sub>t e ;; T"
+    shows "\<Gamma>  \<turnstile>\<^sub>t hp_rec_list t0 (hp_lambda (hp_lambda (hp_lambda e))) ;; (exp_qbs (list X) T)"
   by(rule hpt_reclist[OF assms(1) hpt_abs[OF hpt_abs[OF hpt_abs[OF assms(2)]]]])
 
 subsubsection \<open> Ennriched Expressions \<close>
@@ -1036,14 +986,14 @@ lemma hpt_comp:
   by(simp add: hpprog_typing_def hp_comp_def)
 
 text \<open> The followings are examples. \<close>
-lemma "\<Gamma>,, Y \<turnstile>\<^sub>t hp_app (hp_lambda var1) var1 ;; Y"
+lemma "\<Gamma>,, Y \<turnstile>\<^sub>t \<lambda>\<^sub>t var1 $\<^sub>t var1 ;; Y"
   apply(rule hpt_app)
    apply(rule hpt_abs)
    apply(rule hpt_var1)
   apply(rule hpt_var1)
   done
 
-lemma "\<Gamma> \<turnstile>\<^sub>t hp_lambda (hp_lambda (hp_normal var2 var1)) ;; \<real>\<^sub>Q \<Rightarrow>\<^sub>Q \<real>\<^sub>Q \<Rightarrow>\<^sub>Q monadP_qbs \<real>\<^sub>Q"
+lemma "\<Gamma> \<turnstile>\<^sub>t \<lambda>\<^sub>t (\<lambda>\<^sub>t (hp_normal var2 var1)) ;; \<real>\<^sub>Q \<Rightarrow>\<^sub>Q \<real>\<^sub>Q \<Rightarrow>\<^sub>Q P\<^sub>t \<real>\<^sub>Q"
   apply(rule hpt_abs)
   apply(rule hpt_abs)
   apply(rule hpt_normal)

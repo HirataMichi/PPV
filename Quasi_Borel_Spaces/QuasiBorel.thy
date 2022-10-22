@@ -371,6 +371,19 @@ lemma map_qbs_Mx[simp]:
  "qbs_Mx (map_qbs f X) = {\<beta>. \<exists>\<alpha>\<in> qbs_Mx X. \<beta> = f \<circ> \<alpha>}"
   by(simp add: qbs_Mx_def)
 
+lemma map_qbs_morphism_f: "f \<in> X \<rightarrow>\<^sub>Q map_qbs f X"
+  by(auto intro!: qbs_morphismI)
+
+lemma map_qbs_morphism_inverse_f:
+  assumes "\<And>x. x \<in> qbs_space X \<Longrightarrow> g (f x) = x"
+  shows "g \<in> map_qbs f X \<rightarrow>\<^sub>Q X"
+proof(auto intro!: qbs_morphismI)
+  fix \<alpha>
+  assume h:"\<alpha> \<in> qbs_Mx X"
+  from qbs_Mx_to_X(2)[OF this] assms have "g \<circ> (f \<circ> \<alpha>) = \<alpha>"
+    by auto
+  with  h show "g \<circ> (f \<circ> \<alpha>) \<in> qbs_Mx X" by simp
+qed
 
 inductive_set generating_Mx :: "'a set \<Rightarrow> (real \<Rightarrow> 'a) set \<Rightarrow> (real \<Rightarrow> 'a) set"
   for X :: "'a set" and Mx :: "(real \<Rightarrow> 'a) set"

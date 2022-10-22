@@ -289,9 +289,9 @@ qed
 
 subsubsection \<open> Lists \<close>
 abbreviation "list_of X \<equiv> \<amalg>\<^sub>Q n\<in>(UNIV :: nat set). (\<Pi>\<^sub>Q i\<in>{..<n}. X)"
-abbreviation list_nil :: "nat \<times> (nat \<Rightarrow> 'a)" where
+definition list_nil :: "nat \<times> (nat \<Rightarrow> 'a)" where
 "list_nil \<equiv> (0, \<lambda>n. undefined)"
-abbreviation list_cons :: "['a, nat \<times> (nat \<Rightarrow> 'a)] \<Rightarrow> nat \<times> (nat \<Rightarrow> 'a)" where
+definition list_cons :: "['a, nat \<times> (nat \<Rightarrow> 'a)] \<Rightarrow> nat \<times> (nat \<Rightarrow> 'a)" where
 "list_cons x l \<equiv> (Suc (fst l), (\<lambda>n. if n = 0 then x else (snd l) (n - 1)))"
 
 definition list_head :: "nat \<times> (nat \<Rightarrow> 'a) \<Rightarrow> 'a" where
@@ -302,7 +302,7 @@ definition list_tail :: "nat \<times> (nat \<Rightarrow> 'a) \<Rightarrow> nat \
 
 lemma list_simp1:
  "list_nil \<noteq> list_cons x l"
-  by simp
+  by(simp add: list_nil_def list_cons_def)
 
 lemma list_simp2:
   assumes "list_cons a al = list_cons b bl"
@@ -310,21 +310,21 @@ lemma list_simp2:
 proof -
   have "a = snd (list_cons a al) 0"
        "b = snd (list_cons b bl) 0"
-    by auto
+    by(auto simp: list_nil_def list_cons_def)
   thus "a = b"
     by(simp add: assms)
 next
   have "fst al = fst bl"
-    using assms by simp
+    using assms by (simp add: list_nil_def list_cons_def)
   moreover have "snd al = snd bl"
   proof
     fix n
     have "snd al n = snd (list_cons a al) (Suc n)"
-      by simp
+      by(simp add: list_nil_def list_cons_def)
     also have "... = snd (list_cons b bl) (Suc n)"
       by (simp add: assms)
     also have "... = snd bl n"
-      by simp
+      by(simp add: list_nil_def list_cons_def)
     finally show "snd al n = snd bl n" .
   qed
   ultimately show "al = bl"
@@ -333,12 +333,12 @@ qed
 
 lemma list_simp3:
   shows "list_head (list_cons a l) = a"
-  by(simp add: list_head_def)
+  by(simp add: list_head_def list_cons_def)
 
 lemma list_simp4:
   assumes "l \<in> qbs_space (list_of X)"
   shows "list_tail (list_cons a l) = l"
-  using assms by(simp_all add: list_tail_def)
+  using assms by(simp_all add: list_tail_def list_cons_def)
 
 lemma list_decomp1:
   assumes "l \<in> qbs_space (list_of X)"
@@ -350,12 +350,12 @@ proof(cases l)
   proof(cases n)
     case 0
     then show ?thesis
-      using assms hl by simp
+      using assms hl by (simp add: list_nil_def list_cons_def)
   next
     case hn:(Suc n')
     define f' where "f' \<equiv> \<lambda>m. f (Suc m)"
     have "l = list_cons (f 0) (n',f')"
-    proof(simp add: hl hn, standard)
+    proof(simp add: hl hn list_nil_def list_cons_def, standard)
       fix m
       show "f m = (if m = 0 then f 0 else snd (n', f') (m - 1))"
         using assms hl by(cases m; fastforce simp: f'_def) 
@@ -372,7 +372,7 @@ proof(cases l)
     qed
     ultimately show ?thesis
       using hl assms
-      by(auto intro!: exI[where x="f 0"] exI[where x="(n',\<lambda>m. if m = 0 then undefined else f (Suc m))"])
+      by(auto intro!: exI[where x="f 0"] exI[where x="(n',\<lambda>m. if m = 0 then undefined else f (Suc m))"] simp: list_nil_def list_cons_def)
   qed
 qed
 
@@ -392,13 +392,13 @@ qed
 
 lemma list_simp6:
  "list_nil \<in> qbs_space (list_of X)"
-  by simp
+  by (simp add: list_nil_def)
 
 lemma list_simp7:
   assumes "a \<in> qbs_space X"
       and "l \<in> qbs_space (list_of X)"
     shows "list_cons a l \<in> qbs_space (list_of X)"
-  using assms by(fastforce simp: PiE_def extensional_def)
+  using assms by(fastforce simp: PiE_def extensional_def list_cons_def)
 
 lemma list_destruct_rule:
   assumes "l \<in> qbs_space (list_of X)"
@@ -419,15 +419,15 @@ proof(cases l)
   proof(induction n arbitrary: f l)
     case 0
     then show ?case
-      using assms(1,2) by simp
+      using assms(1,2) by (simp add: list_nil_def)
   next
     case ih:(Suc n)
     then obtain a l' where hl:
     "a \<in> qbs_space X" "l' \<in> qbs_space (list_of X)" "l = list_cons a l'"
-      using list_decomp1 by blast
+      using list_decomp1  unfolding list_nil_def list_cons_def by blast
     have "P l'"
       using ih hl(3)
-      by(auto intro!: ih(1)[OF _ hl(2),of "snd l'"])
+      by(auto intro!: ih(1)[OF _ hl(2),of "snd l'"] simp: list_cons_def)
     from assms(3)[OF hl(1,2) this]
     show ?case
       by(simp add: hl(3))
@@ -448,21 +448,26 @@ definition to_list :: "nat \<times> (nat \<Rightarrow> 'a) \<Rightarrow> 'a list
 
 lemma to_list_simp1:
   shows "to_list list_nil = []"
-  by(simp add: to_list_def)
+  by(simp add: to_list_def list_nil_def)
 
 lemma to_list_simp2:
   assumes "l \<in> qbs_space (list_of X)"
   shows "to_list (list_cons a l) = a # to_list l"
-  using assms by(auto simp:PiE_def to_list_def)
+  using assms by(auto simp: PiE_def to_list_def list_cons_def)
+
+lemma to_list_set:
+  assumes "l \<in> qbs_space (list_of X)"
+  shows "set (to_list l) \<subseteq> qbs_space X"
+  by(rule list_induct_rule[OF assms]) (auto simp: to_list_simp1 to_list_simp2)
 
 lemma from_list_length:
  "fst (from_list l) = length l"
-  by(induction l, simp_all)
+  by(induction l, simp_all add: list_cons_def list_nil_def)
 
 lemma from_list_in_list_of:
   assumes "set l \<subseteq> qbs_space X"
   shows "from_list l \<in> qbs_space (list_of X)"
-  using assms by(induction l) (auto simp: PiE_def extensional_def Pi_def)
+  using assms by(induction l) (auto simp: PiE_def extensional_def Pi_def list_cons_def list_nil_def)
 
 lemma from_list_in_list_of':
   shows "from_list l \<in> qbs_space (list_of (Abs_quasi_borel (UNIV,UNIV)))"
@@ -480,8 +485,7 @@ lemma list_cons_in_list_of:
 
 lemma from_list_to_list_ident:
  "(to_list \<circ> from_list) l = l"
-  by(induction l)
-   (simp add: to_list_def,simp add: to_list_simp2[OF from_list_in_list_of'])
+  by(induction l) (simp add: to_list_def list_nil_def,simp add: to_list_simp2[OF from_list_in_list_of'])
 
 lemma to_list_from_list_ident:
   assumes "l \<in> qbs_space (list_of X)"
@@ -506,5 +510,12 @@ lemma rec_list'_simp2:
   assumes "l \<in> qbs_space (list_of X)"
   shows "rec_list' t f (list_cons x l) = f x l (rec_list' t f l)"
   by(simp add: rec_list'_def to_list_simp2[OF assms] to_list_from_list_ident[OF assms,simplified])
+
+definition list_qbs :: "'a quasi_borel \<Rightarrow> 'a list quasi_borel" where
+"list_qbs X \<equiv> map_qbs to_list (list_of X)"
+
+lemma list_qbs_space: "qbs_space (list_qbs X) = {l. set l \<subseteq> qbs_space X}"
+  using to_list_set[of _ X]
+  by(auto simp: list_qbs_def image_def from_list_to_list_ident[simplified comp_def] from_list_in_list_of intro!: bexI[where x="from_list _"] simp del: coproduct_qbs_space)
 
 end

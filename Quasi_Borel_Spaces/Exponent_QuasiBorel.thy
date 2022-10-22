@@ -154,6 +154,11 @@ lemma curry_preserves_morphisms:
   shows "curry f \<in> X \<rightarrow>\<^sub>Q exp_qbs Y Z"
   by(rule qbs_morphismE(2)[OF curry_morphism,simplified,OF assms])
 
+lemma curry_preserves_morphisms':
+  assumes "case_prod f \<in> X \<Otimes>\<^sub>Q Y \<rightarrow>\<^sub>Q Z"
+  shows "f \<in> X \<rightarrow>\<^sub>Q Y \<Rightarrow>\<^sub>Q Z"
+  by (metis assms curry_case_prod curry_preserves_morphisms)
+
 lemma uncurry_morphism:
  "case_prod \<in> exp_qbs X (exp_qbs Y Z) \<rightarrow>\<^sub>Q exp_qbs (X \<Otimes>\<^sub>Q Y) Z"
 proof(auto intro!: qbs_morphismI simp: exp_qbs_Mx_def)
@@ -181,13 +186,55 @@ qed
 lemma uncurry_preserves_morphisms:
   assumes "f \<in> X \<rightarrow>\<^sub>Q exp_qbs Y Z"
   shows "case_prod f \<in> X \<Otimes>\<^sub>Q Y \<rightarrow>\<^sub>Q Z"
- by(rule qbs_morphismE(2)[OF uncurry_morphism,simplified,OF assms])
+  by(rule qbs_morphismE(2)[OF uncurry_morphism,simplified,OF assms])
+
+lemma uncurry_preserves_morphisms':
+  assumes "f \<in> X \<rightarrow>\<^sub>Q exp_qbs Y Z"
+  shows "(\<lambda>xy. f (fst xy) (snd xy)) \<in> X \<Otimes>\<^sub>Q Y \<rightarrow>\<^sub>Q Z"
+  using uncurry_preserves_morphisms[OF assms] by(simp add: split_beta')
 
 lemma arg_swap_morphism:
   assumes "f \<in> X \<rightarrow>\<^sub>Q exp_qbs Y Z"
   shows "(\<lambda>y x. f x y) \<in> Y \<rightarrow>\<^sub>Q exp_qbs X Z"
   using curry_preserves_morphisms[OF qbs_morphism_pair_swap[OF uncurry_preserves_morphisms[OF assms]]]
   by simp
+
+lemma arg_swap_morphism':
+  assumes "(\<lambda>g. f (\<lambda>w x. g x w)) \<in> exp_qbs X (exp_qbs W Y) \<rightarrow>\<^sub>Q Z"
+  shows "f \<in> exp_qbs W (exp_qbs X Y) \<rightarrow>\<^sub>Q Z"
+proof(rule qbs_morphismI)
+  fix \<alpha>
+  assume "\<alpha> \<in> qbs_Mx (exp_qbs W (exp_qbs X Y))"
+  then have "(\<lambda>((r,w),x). \<alpha> r w x) \<in> (qbs_borel \<Otimes>\<^sub>Q W) \<Otimes>\<^sub>Q X \<rightarrow>\<^sub>Q Y"
+    by(auto simp: qbs_Mx_is_morphisms dest: uncurry_preserves_morphisms)
+  hence "(\<lambda>(r,w,x). \<alpha> r w x) \<in> qbs_borel \<Otimes>\<^sub>Q W \<Otimes>\<^sub>Q X \<rightarrow>\<^sub>Q Y"
+    by(auto intro!: qbs_morphism_cong[where f="(\<lambda>((r,w),x). \<alpha> r w x) \<circ> (\<lambda>(x, y, z). ((x, y), z))" and g="\<lambda>(r,w,x). \<alpha> r w x"] qbs_morphism_comp[OF qbs_morphism_pair_assoc2])
+  hence "(\<lambda>(r,x,w). \<alpha> r w x) \<in> qbs_borel \<Otimes>\<^sub>Q X \<Otimes>\<^sub>Q W \<rightarrow>\<^sub>Q Y"
+    by(auto intro!: qbs_morphism_cong[where f="(\<lambda>(r,w,x). \<alpha> r w x) \<circ> map_prod id (\<lambda>(x,y). (y,x))" and g="(\<lambda>(r,x,w). \<alpha> r w x)"] qbs_morphism_comp qbs_morphism_map_prod qbs_morphism_pair_swap)
+  hence "(\<lambda>((r,x),w). \<alpha> r w x) \<in> (qbs_borel \<Otimes>\<^sub>Q X) \<Otimes>\<^sub>Q W \<rightarrow>\<^sub>Q Y"
+    by(auto intro!: qbs_morphism_cong[where f="(\<lambda>(r,x,w). \<alpha> r w x) \<circ> (\<lambda>((x, y), z). (x, y, z))" and g="\<lambda>((r,x),w). \<alpha> r w x"] qbs_morphism_comp[OF qbs_morphism_pair_assoc1])
+  hence "(\<lambda>r x w. \<alpha> r w x) \<in> qbs_Mx (exp_qbs X (exp_qbs W Y))"
+    by(auto simp: qbs_Mx_is_morphisms intro!: curry_preserves_morphisms')
+  from qbs_morphismE(3)[OF assms this] show "f \<circ> \<alpha> \<in> qbs_Mx Z"
+    by(auto simp: comp_def)
+qed
+
+lemma arg_swap_morphism_map_qbs1:
+  assumes "g \<in> exp_qbs W (exp_qbs X Y) \<rightarrow>\<^sub>Q Z"
+  shows "(\<lambda>k. g (k \<circ> f)) \<in> exp_qbs (map_qbs f W) (exp_qbs X Y) \<rightarrow>\<^sub>Q Z"
+proof(rule qbs_morphismI)
+  fix \<alpha>
+  assume "\<alpha> \<in> qbs_Mx (exp_qbs (map_qbs f W) (exp_qbs X Y))"
+  then have "(\<lambda>e r x. \<alpha> r e x) \<in> map_qbs f W \<rightarrow>\<^sub>Q (exp_qbs qbs_borel (exp_qbs X Y))"
+    by(auto simp: qbs_Mx_is_morphisms dest: arg_swap_morphism)
+  then have "(\<lambda>e r x. \<alpha> r e x) \<circ> f \<in> W \<rightarrow>\<^sub>Q (exp_qbs qbs_borel (exp_qbs X Y))"
+    by(auto intro!: qbs_morphism_comp map_qbs_morphism_f)
+  then have "(\<lambda>r w. \<alpha> r (f w)) \<in> qbs_Mx (exp_qbs W (exp_qbs X Y))"
+    by(auto simp: qbs_Mx_is_morphisms dest: arg_swap_morphism)
+  from qbs_morphismE(3)[OF assms this] show "(\<lambda>k. g (k \<circ> f)) \<circ> \<alpha> \<in> qbs_Mx Z"
+    by(auto simp: comp_def)
+qed
+
 
 lemma exp_qbs_comp_morphism:
   assumes "f \<in> W \<rightarrow>\<^sub>Q exp_qbs X Y"
@@ -412,6 +459,78 @@ proof(rule curry_preserves_morphisms[where f="(\<lambda>(z :: real \<times> real
     by auto
 qed
 
+lemma list_cons_qbs_morphism: "list_cons \<in> X \<rightarrow>\<^sub>Q (list_of X) \<Rightarrow>\<^sub>Q (list_of X)"
+proof(rule curry_preserves_morphisms',rule pair_qbs_morphismI)
+  fix \<alpha> \<beta>
+  assume h:"\<alpha> \<in> qbs_Mx X"
+           "\<beta> \<in> qbs_Mx (list_of X)"
+  then obtain \<gamma> f where hf:
+   "\<beta> = (\<lambda>r. (f r, \<gamma> (f r) r))" "f \<in> real_borel \<rightarrow>\<^sub>M count_space UNIV" "\<And>i. i \<in> range f \<Longrightarrow> \<gamma> i \<in> qbs_Mx (\<Pi>\<^sub>Q j\<in>{..<i}. X)"
+    by(auto simp: coprod_qbs_Mx_def)
+  define f' \<beta>'
+    where "f' \<equiv> (\<lambda>r. Suc (f r))" "\<beta>' \<equiv> (\<lambda>i r n. if n = 0 then \<alpha> r else \<gamma> (i - 1) r (n - 1))"
+  then have "(\<lambda>(x, l). list_cons x l) \<circ> (\<lambda>r. (\<alpha> r, \<beta> r)) = (\<lambda>r. (f' r, \<beta>' (f' r) r))"
+    by(auto simp: comp_def hf(1) ext list_cons_def)
+  also have "... \<in> qbs_Mx (list_of X)"
+  proof(simp,rule coprod_qbs_MxI)
+    show "f' \<in> real_borel \<rightarrow>\<^sub>M count_space UNIV"
+      using hf by(simp add: f'_\<beta>'_def(1))
+  next
+    fix j
+    assume hj:"j \<in> range f'"
+    then have hj':"j - 1 \<in> range f"
+      by(auto simp: f'_\<beta>'_def(1))
+    show "\<beta>' j \<in> qbs_Mx (\<Pi>\<^sub>Q i\<in>{..<j}. X)"   
+    proof(simp, rule prod_qbs_MxI)
+      fix i
+      assume hi:"i \<in> {..<j}"
+      then consider "i = 0" | "0 < i" "i < j"
+        by auto
+      then show "(\<lambda>r. \<beta>' j r i) \<in> qbs_Mx X"
+      proof cases
+        case 1
+        then show ?thesis by(simp add: h(1) f'_\<beta>'_def(2))
+      next
+        case 2
+        then have "i - 1 \<in> {..<j - Suc 0}" by simp
+        from prod_qbs_MxE(1)[OF hf(3)[OF hj',simplified] this] 2
+        show ?thesis
+          by(simp add: f'_\<beta>'_def(2))
+      qed
+    next
+      fix i
+      assume hi:"i \<notin> {..<j}"
+      then have "i \<noteq> 0" "i - Suc 0 \<notin> {..<j - Suc 0}"
+        using f'_\<beta>'_def(1) hj by fastforce+
+      with prod_qbs_MxE(2)[OF hf(3)[OF hj',simplified]]
+      show "(\<lambda>r. \<beta>' j r i) = (\<lambda>r. undefined)"
+        by(simp add: f'_\<beta>'_def(2))
+    qed
+  qed
+  finally show "(\<lambda>(x, l). list_cons x l) \<circ> (\<lambda>r. (\<alpha> r, \<beta> r)) \<in> qbs_Mx (list_of X)" .
+qed
+
+corollary cons_qbs_morphism: "Cons \<in> X \<rightarrow>\<^sub>Q (list_qbs X) \<Rightarrow>\<^sub>Q (list_qbs X)"
+proof(rule arg_swap_morphism)
+  show "(\<lambda>x y. y # x) \<in> list_qbs X \<rightarrow>\<^sub>Q X \<Rightarrow>\<^sub>Q list_qbs X"
+  proof(rule qbs_morphism_cong[where f="(\<lambda>l x. x # (to_list l)) \<circ> from_list"])
+    show " (\<lambda>l x. x # to_list l) \<circ> from_list \<in> list_qbs X \<rightarrow>\<^sub>Q X \<Rightarrow>\<^sub>Q list_qbs X"
+    proof(rule qbs_morphism_comp[where Y="list_of X"])
+      show " (\<lambda>l x. x # to_list l) \<in> list_of X \<rightarrow>\<^sub>Q X \<Rightarrow>\<^sub>Q list_qbs X"
+      proof(rule curry_preserves_morphisms')
+        show "(\<lambda>(l, x). x # to_list l) \<in> list_of X \<Otimes>\<^sub>Q X \<rightarrow>\<^sub>Q list_qbs X"
+        proof(rule qbs_morphism_cong[where f="to_list \<circ> (\<lambda>(l,x). from_list (x # to_list l))"])
+          show "to_list \<circ> (\<lambda>(l, x). from_list (x # to_list l)) \<in> list_of X \<Otimes>\<^sub>Q X \<rightarrow>\<^sub>Q list_qbs X"
+          proof(rule qbs_morphism_comp[where Y="list_of X"])
+            show "(\<lambda>(l, x). from_list (x # to_list l)) \<in> list_of X \<Otimes>\<^sub>Q X \<rightarrow>\<^sub>Q list_of X"
+              by(rule qbs_morphism_cong[where f="(\<lambda>(l,x). list_cons x l)",OF _ uncurry_preserves_morphisms[OF arg_swap_morphism[OF list_cons_qbs_morphism]]]) (auto simp: to_list_from_list_ident[simplified comp_def] simp del: coproduct_qbs_space)
+          qed(simp add: list_qbs_def map_qbs_morphism_f)
+        qed(auto simp: to_list_from_list_ident[simplified comp_def] to_list_simp2 simp del: coproduct_qbs_space)
+      qed
+    qed(auto simp: list_qbs_def to_list_from_list_ident[simplified comp_def] intro!: map_qbs_morphism_inverse_f)
+  qed(simp add: from_list_to_list_ident[simplified comp_def])
+qed
+
 
 lemma rec_list_morphism':
  "rec_list' \<in> qbs_space (exp_qbs Y (exp_qbs (exp_qbs X (exp_qbs (list_of X) (exp_qbs Y Y))) (exp_qbs (list_of X) Y)))"
@@ -435,7 +554,7 @@ proof(rule coprod_qbs_canonical1')
           by(fastforce dest: fun_cong)
       qed
       hence "(\<lambda>(x, y). rec_list' (fst y) (snd y) (0, x)) \<circ> \<alpha> = (\<lambda>x. fst (snd (\<alpha> x)))"
-        by(auto simp: rec_list'_simp1 comp_def split_beta')
+        by(auto simp: rec_list'_simp1[simplified list_nil_def] comp_def split_beta')
       also have "... \<in> qbs_Mx Y"
         using h by(auto simp: pair_qbs_Mx_def comp_def)
       finally show "(\<lambda>(x, y). rec_list' (fst y) (snd y) (0, x)) \<circ> \<alpha> \<in> qbs_Mx Y" .
@@ -459,7 +578,7 @@ proof(rule coprod_qbs_canonical1')
       have 4: "\<And>r. (n, \<alpha>' r) = list_tail (Suc n, \<alpha> r)"
         by(simp add: list_tail_def \<alpha>'_def)
       have 5: "\<And>r. (Suc n, \<alpha> r) = list_cons (a r) (n, \<alpha>' r)"
-        unfolding a_def by(simp add: list_simp5[OF 3,simplified 4[symmetric],simplified list_head_def]) auto
+        unfolding a_def by(simp add: list_simp5[OF 3,simplified 4[symmetric],simplified list_head_def list_nil_def,simplified]) 
       have 6: "(\<lambda>r. (n, \<alpha>' r)) \<in> qbs_Mx (list_of X)"
         using 1 by(auto intro!: coprod_qbs_MxI)
 
@@ -513,6 +632,22 @@ proof(rule coprod_qbs_canonical1')
     qed
   qed
 qed simp
+
+lemma rec_list_morphism: "rec_list \<in> qbs_space (Y \<Rightarrow>\<^sub>Q (X \<Rightarrow>\<^sub>Q list_qbs X \<Rightarrow>\<^sub>Q Y \<Rightarrow>\<^sub>Q Y) \<Rightarrow>\<^sub>Q list_qbs X \<Rightarrow>\<^sub>Q Y)"
+  unfolding exp_qbs_space
+proof(rule curry_preserves_morphisms',rule arg_swap_morphism)
+  show "(\<lambda>l yf. (case yf of (y, f) \<Rightarrow> rec_list y f) l) \<in> list_qbs X \<rightarrow>\<^sub>Q Y \<Otimes>\<^sub>Q (X \<Rightarrow>\<^sub>Q list_qbs X \<Rightarrow>\<^sub>Q Y \<Rightarrow>\<^sub>Q Y) \<Rightarrow>\<^sub>Q Y"
+  proof(rule qbs_morphism_cong[where f="(\<lambda>l' (y,f). rec_list y f (to_list l')) \<circ> from_list",OF _ qbs_morphism_comp[where Y="list_of X"]])
+    show "(\<lambda>l' (y,f). rec_list y f (to_list l')) \<in> list_of X \<rightarrow>\<^sub>Q Y \<Otimes>\<^sub>Q (X \<Rightarrow>\<^sub>Q list_qbs X \<Rightarrow>\<^sub>Q Y \<Rightarrow>\<^sub>Q Y) \<Rightarrow>\<^sub>Q Y"
+      apply(rule arg_swap_morphism,simp only: split_beta' list_qbs_def)
+      apply(rule uncurry_preserves_morphisms')
+      apply(rule arg_swap_morphism)
+      apply(rule arg_swap_morphism')
+      apply(rule qbs_morphism_cong[OF _  arg_swap_morphism_map_qbs1[OF arg_swap_morphism'[OF arg_swap_morphism[OF rec_list_morphism'[simplified exp_qbs_space]]]]])
+      apply(auto simp: rec_list'_def from_list_to_list_ident[simplified comp_def])
+      done
+  qed(auto simp: from_list_to_list_ident[simplified comp_def] list_qbs_def to_list_from_list_ident[simplified comp_def] intro!: map_qbs_morphism_inverse_f simp del: coproduct_qbs_space)
+qed
 
 
 end
