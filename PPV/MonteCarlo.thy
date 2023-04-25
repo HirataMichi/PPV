@@ -120,7 +120,7 @@ lemma montecarlo'_typing:
 definition "\<Phi>mon \<equiv> {hp_const 0 <\<^sub>P\<^sub>L var5, var4 =\<^sub>P\<^sub>L hp_expect var2 var1, var3^\<^sup>t2 =\<^sub>P\<^sub>L hp_var var2 var1,
                       hp_integrable var2 var1, hp_integrable var2 (var1 *\<^sub>t var1)}" 
 
-lemma montecalro_integrable:
+lemma montecarlo_integrable:
 ",\<real>\<^sub>Q,,\<real>\<^sub>Q,,\<real>\<^sub>Q,,P\<^sub>t X,,(X \<Rightarrow>\<^sub>Q \<real>\<^sub>Q) | \<Phi>mon
       \<turnstile>\<^sub>P\<^sub>L \<forall>\<^sub>P\<^sub>L n \<in>\<^sub>P\<^sub>L\<nat>\<^sub>Q. hp_integrable (hp_montecarlo $\<^sub>t hp_const n) hp_id
                    \<and>\<^sub>P\<^sub>L hp_integrable (hp_montecarlo $\<^sub>t hp_const n) (hp_id *\<^sub>t hp_id)"
@@ -272,7 +272,7 @@ lemma montecarlo_integrable':
   apply(rule pl_andEl[where \<psi>="hp_integrable (hp_app hp_montecarlo' var1) (hp_id *\<^sub>t hp_id)"])
   apply(rule pl_allE[where \<phi>="\<lambda>t. hp_integrable (hp_app hp_montecarlo' t) hp_id \<and>\<^sub>P\<^sub>L hp_integrable (hp_app hp_montecarlo' t) (hp_id *\<^sub>t hp_id)"],simp add: hp_definitions,rule hpt_var1)
   apply(rule pl_contweakening[where \<phi>="\<forall>\<^sub>P\<^sub>L n \<in>\<^sub>P\<^sub>L\<nat>\<^sub>Q. hp_integrable (hp_app hp_montecarlo (hp_const n)) hp_id \<and>\<^sub>P\<^sub>L hp_integrable (hp_app hp_montecarlo (hp_const n)) (hp_id *\<^sub>t hp_id)"],simp add: hp_montecarlo'_def split_beta' hp_definitions,simp)
-  apply(rule montecalro_integrable)
+  apply(rule montecarlo_integrable)
   done
 
 lemma montecarlo_integrable2':
@@ -281,7 +281,7 @@ lemma montecarlo_integrable2':
   apply(rule pl_andEr[where \<phi>="hp_integrable (hp_app hp_montecarlo' var1) hp_id"])
   apply(rule pl_allE[where \<phi>="\<lambda>t. hp_integrable (hp_app hp_montecarlo' t) hp_id \<and>\<^sub>P\<^sub>L hp_integrable (hp_app hp_montecarlo' t) (hp_id *\<^sub>t hp_id)"],simp add: hp_definitions,rule hpt_var1)
   apply(rule pl_contweakening[where \<phi>="\<forall>\<^sub>P\<^sub>L n \<in>\<^sub>P\<^sub>L\<nat>\<^sub>Q. hp_integrable (hp_app hp_montecarlo (hp_const n)) hp_id \<and>\<^sub>P\<^sub>L hp_integrable (hp_app hp_montecarlo (hp_const n)) (hp_id *\<^sub>t hp_id)"],simp add: hp_montecarlo'_def split_beta' hp_definitions,simp)
-  apply(rule montecalro_integrable)
+  apply(rule montecarlo_integrable)
   done
 
 (* var5 = \<epsilon>, var4 = expectation, var3 = variance, var2= d, var1 = h *)
